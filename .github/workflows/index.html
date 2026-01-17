@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>V NUMBER PANEL | Controle de Números Virtuais</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-black: #000000;
+            --bg-elevated: #080808;
+            --bg-card: #121212;
+            --accent: #8b5cf6; 
+            --accent-dim: #6d28d9;
+            --accent-glow: rgba(139, 92, 246, 0.2);
+            --accent-gradient: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+            --text-primary: #ffffff;
+            --text-secondary: #9ca3af;
+            --border: #1f1f1f;
+            --border-hover: #333333;
+            --success: #10b981;
+            --error: #ef4444;
+            --font-sans: 'Space Grotesk', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+
+        body { 
+            background-color: var(--bg-black); 
+            color: var(--text-primary); 
+            font-family: var(--font-sans); 
+            min-height: 100vh; 
+            overflow: auto !important;
+            position: relative; 
+            width: 100%;
+            touch-action: auto;
+        }
+
+        .bg-grid { position: fixed; inset: 0; background-image: linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px); background-size: 40px 40px; mask-image: radial-gradient(circle at 50% 50%, black, transparent 80%); pointer-events: none; z-index: -1; opacity: 0.3; }
+
+        .app-shell { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; width: 100%; position: relative; z-index: 1; overflow: visible; }
+
+        .sidebar { background: var(--bg-elevated); border-right: 1px solid var(--border); padding: 2rem 1.25rem; display: flex; flex-direction: column; }
+        .brand { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 2.5rem; }
+        .brand-logo { width: 32px; height: 32px; filter: drop-shadow(0 0 8px var(--accent-glow)); }
+        .brand-name { font-weight: 800; font-size: 1.1rem; letter-spacing: 1px; color: var(--accent); }
+
+        .nav-links { display: flex; flex-direction: column; gap: 0.4rem; flex: 1; }
+        .nav-btn { background: transparent; border: none; color: var(--text-secondary); padding: 0.75rem 1rem; border-radius: 10px; display: flex; align-items: center; gap: 0.75rem; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: 0.2s all ease; text-align: left; }
+        .nav-btn:hover { background: rgba(139, 92, 246, 0.05); color: var(--text-primary); }
+        .nav-btn.active { background: var(--accent); color: white; box-shadow: 0 4px 15px var(--accent-glow); }
+        .nav-spacer { flex: 1; }
+
+        .viewport { padding: 2rem; position: relative; width: 100%; background: radial-gradient(circle at top right, var(--accent-glow), transparent 600px); }
+        .view { display: none; animation: fadeIn 0.3s ease-out; margin: 0 auto; width: 100%; padding-bottom: 2rem; min-width: 320px; }
+        .view.active { display: block; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2.5rem; }
+        .user-greeting h1 { font-size: 2rem; font-weight: 700; letter-spacing: -1px; }
+        .blink { animation: blink 1s infinite; }
+        @keyframes blink { 50% { opacity: 0; } }
+
+        .balance-banner { background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; padding: 1.5rem 2rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; position: relative; overflow: hidden; }
+        .balance-banner::before { content: ''; position: absolute; left: 0; top: 0; height: 100%; width: 4px; background: var(--accent); }
+        .balance-banner .label { font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-secondary); letter-spacing: 1.5px; }
+        .balance-banner .amount { font-size: 2.2rem; font-weight: 800; font-family: var(--font-mono); margin-top: 0.25rem; }
+
+        .dashboard-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+        .stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 24px; padding: 1.5rem; display: flex; align-items: center; gap: 1.25rem; }
+        .stat-icon { width: 48px; height: 48px; background: #ffffff; border-radius: 14px; display: flex; align-items: center; justify-content: center; color: #000000; }
+        .stat-info .label { color: var(--text-secondary); font-size: 0.85rem; font-weight: 500; }
+        .stat-info .value { font-size: 1.25rem; font-weight: 700; display: block; }
+
+        .action-card { grid-column: span 3; background: var(--bg-card); border: 1px solid var(--border); border-radius: 32px; padding: 2.5rem; margin-top: 1rem; width: 100%; }
+        .services-scroller { margin-bottom: 2.5rem; overflow-x: auto; padding-bottom: 1rem; width: 100%; }
+        .services-grid { display: flex; gap: 1rem; width: max-content; }
+
+        .service-tile { flex: 0 0 140px; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 20px; padding: 1.5rem 1rem; display: flex; flex-direction: column; align-items: center; gap: 0.75rem; cursor: pointer; transition: 0.2s all; color: var(--text-primary); text-align: center; }
+        .service-tile:hover { border-color: var(--border-hover); transform: translateY(-4px); }
+        .service-tile.active { background: var(--accent); color: white; transform: translateY(-5px); border-color: var(--accent); box-shadow: 0 10px 20px var(--accent-glow); }
+
+        .tile-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+        .wa { background: #25d366; color: white; }
+        .tg { background: #229ed9; color: white; }
+        .go { background: #ea4335; color: white; }
+        .fb { background: #1877f2; color: white; }
+        .ms { background: #00a4ef; color: white; }
+        .ig { background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); color: white; }
+        .tk { background: #000; color: white; border: 1px solid #333; }
+        .nf { background: #e50914; color: white; }
+
+        .generation-controls { display: grid; grid-template-columns: 2fr 1fr 1.5fr; gap: 1.5rem; align-items: flex-end; }
+        .control-group { display: flex; flex-direction: column; gap: 0.75rem; }
+        .control-group label { font-size: 0.8rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; }
+
+        select, input { background: var(--bg-elevated); border: 1px solid var(--border); padding: 1rem 1.25rem; border-radius: 16px; color: white; font-size: 1rem; outline: none; transition: 0.2s; width: 100%; }
+        select:focus, input:focus { border-color: var(--accent); }
+
+        .btn { padding: 1rem 1.5rem; border-radius: 16px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.75rem; border: none; transition: 0.2s all; }
+        .btn.primary { background: var(--accent); color: #ffffff; box-shadow: 0 4px 24px var(--accent-glow); }
+        .btn.disabled { opacity: 0.2; pointer-events: none; filter: grayscale(1); }
+        .btn.secondary { background: rgba(255,255,255,0.05); color: var(--text-primary); border: 1px solid var(--border); }
+
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); backdrop-filter: blur(15px); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-container { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 40px; width: 95%; max-width: 500px; padding: 3rem; position: relative; text-align: center; }
+        .modal-close { position: absolute; top: 1.5rem; right: 1.5rem; background: transparent; border: none; color: var(--text-secondary); cursor: pointer; }
+
+        .loader { width: 48px; height: 48px; border: 4px solid rgba(255,255,255,0.1); border-top: 4px solid var(--accent); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1.5rem; }
+        .loader-small { width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.1); border-top: 2px solid var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        .sms-monitor { background: var(--bg-black); padding: 1.5rem; border-radius: 24px; margin-top: 2rem; border: 1px solid var(--border); min-height: 150px; text-align: left; }
+        .monitor-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; font-size: 0.8rem; color: var(--text-secondary); }
+        .sms-log { display: flex; flex-direction: column; gap: 0.75rem; max-height: 200px; overflow-y: auto; }
+        .sms-entry { background: #111; border: 1px solid #222; padding: 0.75rem 1rem; border-radius: 12px; animation: slideIn 0.3s ease-out; }
+        .sms-entry .code { font-family: var(--font-mono); font-size: 1.2rem; font-weight: 700; color: #fff; margin-bottom: 2px; }
+        .sms-entry .meta { font-size: 0.7rem; color: #666; }
+        .sms-placeholder { text-align:center; padding-top:2rem; opacity:0.3; font-size:0.8rem; }
+
+        @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+
+        .countdown-bar { width: 100%; height: 4px; background: #222; border-radius: 2px; margin-top: 1rem; overflow: hidden; }
+        .countdown-fill { height: 100%; background: var(--accent); width: 100%; transition: width 1s linear; }
+
+        .hidden { display: none !important; }
+
+        .mobile-nav { display: none; }
+
+        .list-view { display: flex; flex-direction: column; gap: 1rem; }
+        .number-item { background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; padding: 1.25rem 1.5rem; display: flex; justify-content: space-between; align-items: center; }
+        .num-main { display: flex; align-items: center; gap: 1rem; }
+        .num-ico { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); }
+        .num-val { font-family: var(--font-mono); font-size: 1.1rem; font-weight: 700; }
+        .num-meta { font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; }
+
+        .badge { background: rgba(34, 197, 94, 0.1); color: #22c55e; padding: 0.4rem 0.8rem; border-radius: 100px; font-size: 0.7rem; font-weight: 800; }
+        .badge-outline { background: rgba(255,255,255,0.1); color: white; }
+        .pulse-dot { width: 8px; height: 8px; background: var(--success); border-radius: 50%; display: inline-block; margin-right: 6px; position: relative; }
+        .pulse-dot::after { content: ''; position: absolute; inset: -3px; border-radius: 50%; background: var(--success); opacity: 0.4; animation: pulse 1.5s infinite; }
+
+        .pix-area { text-align: center; background: #000; padding: 2rem; border-radius: 20px; border: 1px dashed #333; }
+        .qr-box { background: white; width: 150px; height: 150px; margin: 0 auto 1.5rem; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #000; }
+        .pix-label { font-size: 0.8rem; color: #888; margin-bottom: 0.5rem; }
+        .pix-copy-wrapper { display: flex; gap: 0.5rem; align-items: stretch; margin-bottom: 1rem; }
+        .pix-code-block { background: #0a0a0a; padding: 0.8rem; display: block; border-radius: 12px; font-size: 0.7rem; word-break: break-all; border: 1px solid #1f1f1f; flex: 1; text-align: left; }
+        .btn-icon { background: var(--bg-card); border: 1px solid var(--border); color: white; border-radius: 12px; padding: 0.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 48px; }
+        .btn-icon:active { transform: scale(0.9); }
+        .pix-status-box { margin-top: 1.5rem; text-align: center; }
+        .pix-loading { display: flex; align-items: center; justify-content: center; gap: 0.5rem; color: var(--text-secondary); font-size: 0.9rem; }
+        .pix-static-info { display: flex; align-items: center; justify-content: center; gap: 0.5rem; color: var(--accent); font-size: 0.85rem; padding: 1rem; background: rgba(139, 92, 246, 0.05); border-radius: 12px; border: 1px solid var(--accent-glow); line-height: 1.4; }
+
+        @keyframes pulse { 0% { transform: scale(1); opacity: 0.4; } 100% { transform: scale(2.5); opacity: 0; } }
+
+        .modal-success-header { display:flex; align-items:center; justify-content:center; gap:0.5rem; margin-bottom: 1.5rem; }
+        .modal-phone-text { font-family:var(--font-mono); font-size:2rem; letter-spacing:1px; }
+        .countdown-timer-text { font-size:0.75rem; color:var(--text-secondary); margin-top:0.5rem; }
+
+        .support-link { color: var(--accent); text-decoration: none; font-weight: 700; word-break: break-all; }
+        .support-link:hover { text-decoration: underline; }
+
+        @media (max-width: 1024px) {
+            .app-shell { grid-template-columns: 1fr; }
+            .sidebar { display: none; }
+            .viewport { padding: 1.5rem 1rem 6rem; overflow: visible; }
+            .dashboard-grid { grid-template-columns: 1fr; }
+            .action-card { grid-column: 1; padding: 1.5rem; }
+            .generation-controls { grid-template-columns: 1fr; }
+            .mobile-nav { display: flex; position: fixed; bottom: 0; left: 0; right: 0; background: rgba(8, 8, 8, 0.95); backdrop-filter: blur(20px); border-top: 1px solid var(--border); padding: 0.6rem 1rem; justify-content: space-around; z-index: 100; }
+            .mobile-nav-btn { background: transparent; border: none; color: var(--text-secondary); padding: 0.75rem; }
+            .mobile-nav-btn.active { color: var(--accent); }
+            .page-header { flex-direction: column; align-items: flex-start; gap: 1rem; }
+            .user-greeting h1 { font-size: 1.5rem; }
+        }
+    </style>
+    <script type="importmap">
+        {
+          "imports": {
+            "lucide": "https://esm.sh/lucide@0.444.0"
+          }
+        }
+    </script>
+</head>
+<body>
+    <div class="bg-grid"></div>
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="brand">
+                <img src="logo.png" alt="V" class="brand-logo">
+                <span class="brand-name">V-NUMBER</span>
+            </div>
+            <nav class="nav-links">
+                <button class="nav-btn active" data-view="dashboard"><i data-lucide="layout-dashboard"></i><span>Painel</span></button>
+                <button class="nav-btn" data-view="mynumbers"><i data-lucide="smartphone"></i><span>Meus Números</span></button>
+                <button class="nav-btn" data-view="history"><i data-lucide="history"></i><span>Extrato</span></button>
+                <button class="nav-btn" data-view="recharge"><i data-lucide="wallet"></i><span>Carteira</span></button>
+                <button class="nav-btn" data-view="support"><i data-lucide="headset"></i><span>Suporte</span></button>
+                <div class="nav-spacer"></div>
+                <button class="nav-btn" data-view="settings"><i data-lucide="shield-check"></i><span>Segurança</span></button>
+            </nav>
+        </aside>
+
+        <main class="viewport">
+            <!-- View: Dashboard -->
+            <section id="view-dashboard" class="view active">
+                <header class="page-header">
+                    <div class="user-greeting">
+                        <h1>Infraestrutura <span class="blink">_</span></h1>
+                        <p>Rede global de recebimento SMS em tempo real.</p>
+                    </div>
+                </header>
+
+                <div class="balance-banner">
+                    <div class="balance-content">
+                        <span class="label">CRÉDITOS DISPONÍVEIS</span>
+                        <div class="amount" id="display-balance">R$ 0,00</div>
+                    </div>
+                    <div class="banner-visual"><i data-lucide="credit-card" style="width:40px; height:40px; opacity:0.4;"></i></div>
+                </div>
+
+                <div class="dashboard-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon"><i data-lucide="users"></i></div>
+                        <div class="stat-info"><span class="label">Online agora</span><span class="value" id="stat-online">2.481</span></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i data-lucide="activity"></i></div>
+                        <div class="stat-info"><span class="label">Conexões</span><span class="value" id="stat-active">0</span></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i data-lucide="globe"></i></div>
+                        <div class="stat-info"><span class="label">SMS Recebidos</span><span class="value" id="stat-sms">0</span></div>
+                    </div>
+
+                    <div class="action-card">
+                        <div class="card-header" style="margin-bottom:1.5rem;">
+                            <h2>Alocar Nova Linha</h2>
+                            <p>Selecione a plataforma para bypass de segurança.</p>
+                        </div>
+                        
+                        <div class="services-scroller">
+                            <div class="services-grid" id="services-container">
+                                <!-- Services injected by JS -->
+                            </div>
+                        </div>
+
+                        <div class="generation-controls">
+                            <div class="control-group">
+                                <label>Região Operadora</label>
+                                <select id="select-country">
+                                    <option value="br">Brasil (+55)</option>
+                                    <option value="us">Estados Unidos (+1)</option>
+                                    <option value="uk">Reino Unido (+44)</option>
+                                    <option value="pt">Portugal (+351)</option>
+                                    <option value="es">Espanha (+34)</option>
+                                    <option value="fr">França (+33)</option>
+                                    <option value="de">Alemanha (+49)</option>
+                                    <option value="it">Itália (+39)</option>
+                                    <option value="ca">Canadá (+1)</option>
+                                    <option value="mx">México (+52)</option>
+                                    <option value="ar">Argentina (+54)</option>
+                                    <option value="ru">Rússia (+7)</option>
+                                    <option value="cn">China (+86)</option>
+                                    <option value="jp">Japão (+81)</option>
+                                    <option value="au">Austrália (+61)</option>
+                                </select>
+                            </div>
+                            <div class="control-group">
+                                <label>Prefixo / DDD</label>
+                                <input type="text" id="input-prefix" placeholder="Ex: 11" list="ddd-suggestions">
+                                <datalist id="ddd-suggestions">
+                                    <option value="11">São Paulo (11)</option>
+                                    <option value="21">Rio de Janeiro (21)</option>
+                                    <option value="31">Belo Horizonte (31)</option>
+                                    <option value="41">Curitiba (41)</option>
+                                    <option value="51">Porto Alegre (51)</option>
+                                    <option value="61">Brasília (61)</option>
+                                    <option value="71">Salvador (71)</option>
+                                    <option value="81">Recife (81)</option>
+                                    <option value="91">Belém (91)</option>
+                                    <option value="212">Nova York (212)</option>
+                                    <option value="310">Los Angeles (310)</option>
+                                    <option value="21">Lisboa (21)</option>
+                                    <option value="91">Madrid (91)</option>
+                                    <option value="01">Paris (01)</option>
+                                </datalist>
+                            </div>
+                            <button id="btn-generate" class="btn primary disabled">
+                                <span>Alocar Número</span>
+                                <i data-lucide="arrow-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- View: Ativos -->
+            <section id="view-mynumbers" class="view">
+                <header class="page-header"><h1>Ativos em Tempo Real</h1></header>
+                <div id="numbers-container" class="list-view"></div>
+            </section>
+
+            <!-- View: Histórico -->
+            <section id="view-history" class="view">
+                <header class="page-header"><h1>Log de Operações</h1></header>
+                <div class="action-card" style="padding:0; overflow-x: auto;">
+                    <table style="width:100%; border-collapse: collapse; min-width: 500px;">
+                        <thead style="background:#111;"><tr><th style="padding:1rem; text-align:left;">Data</th><th style="padding:1rem; text-align:left;">Serviço</th><th style="padding:1rem; text-align:left;">Número</th><th style="padding:1rem; text-align:left;">Valor</th></tr></thead>
+                        <tbody id="history-body"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- View: Recarregar -->
+            <section id="view-recharge" class="view">
+                <header class="page-header"><h1>Créditos</h1></header>
+                <div class="action-card">
+                    <p style="margin-bottom:2rem; color:var(--text-secondary);">Recarga instantânea via PIX para uso imediato.</p>
+                    <div class="preset-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem; margin-bottom: 2rem;">
+                        <button class="btn secondary preset-btn" data-value="10">R$ 10,00</button>
+                        <button class="btn secondary preset-btn" data-value="50">R$ 50,00</button>
+                        <button class="btn secondary preset-btn" data-value="100">R$ 100,00</button>
+                        <button class="btn secondary preset-btn" data-value="200">R$ 200,00</button>
+                    </div>
+                    
+                    <div id="pix-display" class="hidden pix-area">
+                        <div class="qr-box">
+                            <i data-lucide="qr-code" style="width: 120px; height: 120px;"></i>
+                        </div>
+                        <p class="pix-label">CÓDIGO PIX COPIA E COLA:</p>
+                        <div class="pix-copy-wrapper">
+                            <code id="pix-code" class="pix-code-block">00020101021126360014BR.GOV.BCB.PIX0114+55219863726775204000053039865802BR5925JOSE HENRIQUE FANHA DE SO6008SAOPAULO61080132305062070503***6304D5D6</code>
+                            <button id="btn-copy-pix" class="btn-icon"><i data-lucide="copy"></i></button>
+                        </div>
+                        
+                        <div class="pix-actions" style="margin-top: 1rem;">
+                            <a href="https://www.itau.com.br" target="_blank" class="btn secondary" style="width: 100%; text-decoration: none;">ABRIR APLICATIVO DO BANCO</a>
+                        </div>
+
+                        <div id="pix-status-box" class="pix-status-box">
+                            <div class="pix-static-info" style="flex-direction: column; gap: 0.5rem;">
+                                <div style="display:flex; align-items:center; gap:0.5rem;">
+                                    <i data-lucide="info" style="width: 16px; height: 16px;"></i>
+                                    <span>Aguardando pagamento...</span>
+                                </div>
+                                <p style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.5rem;">
+                                    se em até 2 horas a sua recarga não cair fale com o nosso suporte: 
+                                    <a href="https://wa.me/552198725-3392?text=OI,+Poderia+falar+com+o+SUPORTE.+" class="support-link" target="_blank">Clique Aqui</a>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- View: Suporte -->
+            <section id="view-support" class="view">
+                <header class="page-header"><h1>Central de Suporte</h1></header>
+                <div class="action-card">
+                    <div style="text-align: center; padding: 1rem;">
+                        <div class="stat-icon" style="margin: 0 auto 1.5rem; width: 64px; height: 64px; background: var(--accent); color: white;">
+                            <i data-lucide="headset" style="width: 32px; height: 32px;"></i>
+                        </div>
+                        <h2 style="margin-bottom: 1rem;">Como podemos ajudar?</h2>
+                        <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+                            Nossa equipe está disponível para resolver problemas técnicos, dúvidas sobre recargas ou alocação de números.
+                        </p>
+                        <a href="https://wa.me/552198725-3392?text=OI,+Poderia+falar+com+o+SUPORTE.+" target="_blank" class="btn primary" style="width: 100%; text-decoration: none;">
+                            <i data-lucide="message-circle"></i>
+                            FALAR NO WHATSAPP
+                        </a>
+                        <p style="margin-top: 1.5rem; font-size: 0.8rem; color: var(--text-secondary);">
+                            Atendimento prioritário para usuários com recargas ativas.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- View: Ajustes -->
+            <section id="view-settings" class="view">
+                <header class="page-header"><h1>Ajustes</h1></header>
+                <div class="action-card">
+                    <h3>Privilégios Admin</h3>
+                    <p style="color:var(--text-secondary); margin-bottom: 1.5rem;">Insira o código de liberação para acesso ilimitado.</p>
+                    <input type="password" id="admin-code" placeholder="••••••••" style="width:100%; margin-bottom: 1rem;">
+                    <button id="btn-admin-auth" class="btn secondary" style="width:100%;">Validar Licença</button>
+                </div>
+            </section>
+        </main>
+
+        <nav class="mobile-nav">
+            <button class="mobile-nav-btn active" data-view="dashboard"><i data-lucide="cpu"></i></button>
+            <button class="mobile-nav-btn" data-view="mynumbers"><i data-lucide="hash"></i></button>
+            <button class="mobile-nav-btn" data-view="recharge"><i data-lucide="zap"></i></button>
+            <button class="mobile-nav-btn" data-view="support"><i data-lucide="headset"></i></button>
+            <button class="mobile-nav-btn" data-view="settings"><i data-lucide="settings"></i></button>
+        </nav>
+    </div>
+
+    <!-- Modal: SMS / Generation -->
+    <div class="modal-overlay hidden" id="modal-overlay">
+        <div class="modal-container">
+            <button class="modal-close" id="modal-close"><i data-lucide="x"></i></button>
+            <div id="step-processing">
+                <div class="loader"></div>
+                <h3>Sincronizando com Operadora</h3>
+                <p>Verificando disponibilidade de linha limpa...</p>
+            </div>
+            <div id="step-success" class="hidden">
+                <div class="modal-success-header">
+                    <span class="badge" id="modal-service-name">WHATSAPP</span>
+                    <span class="badge badge-outline">RED-GLOBAL</span>
+                </div>
+                <h2 id="modal-phone-display" class="modal-phone-text">+55 11 9XXXX-XXXX</h2>
+                <div class="countdown-bar"><div class="countdown-fill" id="countdown-fill"></div></div>
+                <p class="countdown-timer-text">Expira em <span id="timer-display">05:00</span></p>
+                
+                <div class="sms-monitor">
+                    <div class="monitor-header">
+                        <span><span class="pulse-dot"></span>ESCUTANDO REDE...</span>
+                        <span id="sms-count">0 SMS</span>
+                    </div>
+                    <div id="sms-log" class="sms-log">
+                        <div class="sms-placeholder">Aguardando envio do código pelo aplicativo...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { createIcons, Cpu, Hash, Zap, Settings, Fingerprint, Activity, Globe, MessageCircle, Send, Mail, Facebook, ArrowRight, X, ListOrdered, Smartphone, Users, QrCode, LayoutDashboard, Wallet, History, ShieldCheck, Instagram, Music, Tv, Copy, Headset, Check, Clock, Info } from 'lucide';
+
+        const SERVICES = [
+            { id: 'whatsapp', name: 'WhatsApp', cost: 5.00, icon: 'message-circle', class: 'wa' },
+            { id: 'telegram', name: 'Telegram', cost: 4.50, icon: 'send', class: 'tg' },
+            { id: 'instagram', name: 'Instagram', cost: 4.00, icon: 'instagram', class: 'ig' },
+            { id: 'google', name: 'Google', cost: 3.00, icon: 'mail', class: 'go' },
+            { id: 'facebook', name: 'Facebook', cost: 3.50, icon: 'facebook', class: 'fb' },
+            { id: 'tiktok', name: 'TikTok', cost: 3.50, icon: 'music', class: 'tk' },
+            { id: 'netflix', name: 'Netflix', cost: 2.00, icon: 'tv', class: 'nf' },
+            { id: 'microsoft', name: 'Microsoft', cost: 2.50, icon: 'smartphone', class: 'ms' }
+        ];
+
+        const STORAGE_KEY = 'vpanel_state_v5';
+
+        class AudioManager {
+            constructor() {
+                this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            async play(type) {
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                
+                if (type === 'click') {
+                    osc.frequency.setValueAtTime(800, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(100, this.ctx.currentTime + 0.1);
+                    gain.gain.setValueAtTime(0.05, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+                } else if (type === 'success') {
+                    osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(1200, this.ctx.currentTime + 0.2);
+                    gain.gain.setValueAtTime(0.05, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+                }
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.2);
+            }
+        }
+
+        function generatePhone(country, prefixInput) {
+            const p = prefixInput || "11";
+            const b = Math.floor(10000000 + Math.random() * 90000000);
+            const codes = {
+                br: '+55', us: '+1', uk: '+44', pt: '+351', es: '+34', fr: '+33',
+                de: '+49', it: '+39', ca: '+1', mx: '+52', ar: '+54', ru: '+7',
+                cn: '+86', jp: '+81', au: '+61'
+            };
+            const code = codes[country] || '+00';
+            if (country === 'br') return `${code} ${p} 9${String(b).slice(0, 4)}-${String(b).slice(4)}`;
+            if (country === 'us' || country === 'ca') return `${code} ${p} 555-${String(b).slice(0, 4)}`;
+            return `${code} ${p} ${String(b).slice(0, 4)} ${String(b).slice(4, 8)}`;
+        }
+
+        function formatBRL(val) {
+            return `R$ ${val.toFixed(2).replace('.', ',')}`;
+        }
+
+        class VNumberApp {
+            constructor() {
+                this.state = this.loadState();
+                this.selectedService = null;
+                this.activeTimer = null;
+                this.audio = new AudioManager();
+                this.init();
+            }
+
+            init() {
+                this.renderServices();
+                this.bindEvents();
+                this.refreshUI();
+                this.updateIcons();
+                this.startOnlineCounter();
+            }
+
+            loadState() {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                return saved ? JSON.parse(saved) : { 
+                    balance: 0.00, 
+                    isUnlimited: false, 
+                    activeNumbers: [], 
+                    history: [], 
+                    totalSms: 0 
+                };
+            }
+
+            saveState() { 
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(this.state)); 
+            }
+
+            updateIcons() { 
+                createIcons({ icons: { Cpu, Hash, Zap, Settings, Fingerprint, Activity, Globe, MessageCircle, Send, Mail, Facebook, ArrowRight, X, ListOrdered, Smartphone, Users, QrCode, LayoutDashboard, Wallet, History, ShieldCheck, Instagram, Music, Tv, Copy, Headset, Check, Clock, Info } }); 
+            }
+
+            renderServices() {
+                const container = document.getElementById('services-container');
+                container.innerHTML = SERVICES.map(s => `
+                    <button class="service-tile" data-service="${s.id}" data-cost="${s.cost}">
+                        <div class="tile-icon ${s.class}"><i data-lucide="${s.icon}"></i></div>
+                        <span class="tile-name">${s.name}</span>
+                        <span class="tile-price">R$ ${s.cost.toFixed(2)}</span>
+                    </button>
+                `).join('');
+            }
+
+            startOnlineCounter() {
+                const el = document.getElementById('stat-online');
+                let val = 2481;
+                setInterval(() => {
+                    val += Math.floor(Math.random() * 5) - 2;
+                    if (val < 2400) val = 2400;
+                    el.innerText = val.toLocaleString();
+                }, 3000);
+            }
+
+            bindEvents() {
+                document.querySelectorAll('[data-view]').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        this.switchView(btn.getAttribute('data-view'));
+                        this.audio.play('click');
+                    });
+                });
+
+                document.getElementById('services-container').addEventListener('click', (e) => {
+                    const tile = e.target.closest('.service-tile');
+                    if (!tile) return;
+                    document.querySelectorAll('.service-tile').forEach(t => t.classList.remove('active'));
+                    tile.classList.add('active');
+                    this.selectedService = SERVICES.find(s => s.id === tile.dataset.service);
+                    document.getElementById('btn-generate').classList.remove('disabled');
+                    this.audio.play('click');
+                });
+
+                document.getElementById('btn-generate').addEventListener('click', () => this.handleGeneration());
+                document.getElementById('btn-admin-auth').addEventListener('click', () => this.checkAdmin());
+                document.getElementById('admin-code').addEventListener('input', (e) => {
+                    if (e.target.value === 'kayzen') this.checkAdmin('kayzen');
+                });
+
+                document.getElementById('modal-close').addEventListener('click', () => {
+                    document.getElementById('modal-overlay').classList.add('hidden');
+                    if (this.activeTimer) clearInterval(this.activeTimer);
+                });
+
+                document.querySelectorAll('.preset-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        this.audio.play('click');
+                        document.getElementById('pix-display').classList.remove('hidden');
+                    });
+                });
+
+                document.getElementById('btn-copy-pix').addEventListener('click', () => {
+                    const code = document.getElementById('pix-code').innerText;
+                    navigator.clipboard.writeText(code).then(() => {
+                        this.audio.play('success');
+                        const btn = document.getElementById('btn-copy-pix');
+                        const original = btn.innerHTML;
+                        btn.innerHTML = '<i data-lucide="check" style="color:var(--success)"></i>';
+                        this.updateIcons();
+                        setTimeout(() => {
+                            btn.innerHTML = original;
+                            this.updateIcons();
+                        }, 2000);
+                    });
+                });
+            }
+
+            switchView(viewId) {
+                document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+                document.querySelectorAll('.nav-btn, .mobile-nav-btn').forEach(b => b.classList.remove('active'));
+                const target = document.getElementById(`view-${viewId}`);
+                if (target) {
+                    target.classList.add('active');
+                    document.querySelectorAll(`[data-view="${viewId}"]`).forEach(b => b.classList.add('active'));
+                    if (viewId === 'mynumbers') this.renderNumbers();
+                    if (viewId === 'history') this.renderHistory();
+                }
+            }
+
+            refreshUI() {
+                const bal = document.getElementById('display-balance');
+                if (this.state.isUnlimited) {
+                    bal.innerText = "INFINITY";
+                    bal.style.color = "#22c55e";
+                } else {
+                    bal.innerText = formatBRL(this.state.balance);
+                    bal.style.color = "white";
+                }
+                document.getElementById('stat-active').innerText = this.state.activeNumbers.length;
+                document.getElementById('stat-sms').innerText = this.state.totalSms;
+            }
+
+            checkAdmin(explicit) {
+                const code = explicit || document.getElementById('admin-code').value;
+                if (code === 'kayzen') {
+                    this.state.isUnlimited = true;
+                    this.saveState();
+                    this.refreshUI();
+                    this.audio.play('success');
+                    alert("LICENÇA V-INFINITY VALIDADA: KAYZEN");
+                }
+            }
+
+            handleGeneration() {
+                if (!this.state.isUnlimited && this.state.balance < this.selectedService.cost) {
+                    alert("Saldo insuficiente para esta operação."); 
+                    this.switchView('recharge');
+                    return;
+                }
+                if (!this.state.isUnlimited) this.state.balance -= this.selectedService.cost;
+                const modal = document.getElementById('modal-overlay');
+                const processing = document.getElementById('step-processing');
+                const success = document.getElementById('step-success');
+                modal.classList.remove('hidden');
+                processing.classList.remove('hidden');
+                success.classList.add('hidden');
+                this.audio.play('click');
+
+                setTimeout(() => {
+                    const country = document.getElementById('select-country').value;
+                    const prefix = document.getElementById('input-prefix').value;
+                    const phone = generatePhone(country, prefix);
+                    const newNum = { id: Date.now(), phone, service: this.selectedService.name, cost: this.selectedService.cost, date: new Date().toLocaleString() };
+                    this.state.activeNumbers.unshift(newNum);
+                    this.state.history.unshift(newNum);
+                    this.saveState();
+                    this.refreshUI();
+                    this.showSuccess(newNum);
+                }, 1800);
+            }
+
+            showSuccess(num) {
+                document.getElementById('step-processing').classList.add('hidden');
+                document.getElementById('step-success').classList.remove('hidden');
+                document.getElementById('modal-service-name').innerText = num.service.toUpperCase();
+                document.getElementById('modal-phone-display').innerText = num.phone;
+                const log = document.getElementById('sms-log');
+                log.innerHTML = '<div class="sms-placeholder">Aguardando envio do código pelo aplicativo...</div>';
+                let timeLeft = 300;
+                let smsCount = 0;
+                const fill = document.getElementById('countdown-fill');
+                const timerText = document.getElementById('timer-display');
+                if (this.activeTimer) clearInterval(this.activeTimer);
+                this.activeTimer = setInterval(() => {
+                    timeLeft--;
+                    const m = Math.floor(timeLeft / 60);
+                    const s = timeLeft % 60;
+                    timerText.innerText = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+                    fill.style.width = `${(timeLeft / 300) * 100}%`;
+                    if (timeLeft <= 0) {
+                        clearInterval(this.activeTimer);
+                        document.getElementById('modal-overlay').classList.add('hidden');
+                    }
+                    if (timeLeft === 292 || (timeLeft < 285 && Math.random() < 0.005)) {
+                        smsCount++;
+                        this.state.totalSms++;
+                        this.saveState();
+                        this.refreshUI();
+                        this.addSmsEntry();
+                        document.getElementById('sms-count').innerText = `${smsCount} SMS`;
+                    }
+                }, 1000);
+            }
+
+            addSmsEntry() {
+                const log = document.getElementById('sms-log');
+                if (log.querySelector('.sms-placeholder')) log.innerHTML = '';
+                const code = Math.floor(100000 + Math.random() * 900000);
+                const div = document.createElement('div');
+                div.className = 'sms-entry';
+                div.innerHTML = `<div class="code">CÓDIGO: ${code}</div><div class="meta">Recebido via Canal Global • ${new Date().toLocaleTimeString()}</div>`;
+                log.prepend(div);
+                this.audio.play('success');
+            }
+
+            renderNumbers() {
+                const container = document.getElementById('numbers-container');
+                if (this.state.activeNumbers.length === 0) {
+                    container.innerHTML = '<p style="text-align:center; opacity:0.5; padding:2rem;">Nenhum número alocado recentemente.</p>';
+                    return;
+                }
+                container.innerHTML = this.state.activeNumbers.map(n => `
+                    <div class="number-item">
+                        <div class="num-main">
+                            <div class="num-ico"><i data-lucide="smartphone"></i></div>
+                            <div>
+                                <div class="num-val">${n.phone}</div>
+                                <div class="num-meta">${n.service} • ${n.date}</div>
+                            </div>
+                        </div>
+                        <span class="badge">ATIVO</span>
+                    </div>
+                `).join('');
+                this.updateIcons();
+            }
+
+            renderHistory() {
+                const body = document.getElementById('history-body');
+                if (this.state.history.length === 0) {
+                    body.innerHTML = '<tr><td colspan="4" style="padding:2rem; text-align:center; opacity:0.5;">Sem registros.</td></tr>';
+                    return;
+                }
+                body.innerHTML = this.state.history.map(h => `
+                    <tr style="border-bottom:1px solid #222;">
+                        <td style="padding:1rem; font-size:0.8rem;">${h.date}</td>
+                        <td style="padding:1rem; font-size:0.8rem; text-transform:capitalize;">${h.service}</td>
+                        <td style="padding:1rem; font-size:0.8rem; font-family:var(--font-mono);">${h.phone}</td>
+                        <td style="padding:1rem; font-size:0.8rem;">R$ ${h.cost.toFixed(2)}</td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            new VNumberApp();
+        });
+    </script>
+</body>
+</html>
